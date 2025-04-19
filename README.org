@@ -12,12 +12,15 @@
 - REPL-friendly for interactive workflows.
 
 ** Installation
-Add to your ~deps.edn~:
+For ~Clojure CLI/deps.edn~:
 #+BEGIN_SRC clojure
-{:deps {io.github.biutthapa/vary {:git/url "https://github.com/biutthapa/vary"
-                                  :sha "056358effa38eb5b67ed178532b0ff2475780cb4"}}}
+com.biutthapa/vary {:mvn/version "0.0.1-SNAPSHOT"}
 #+END_SRC
 
+For ~Leiningen/Boot~:
+#+BEGIN_SRC clojure
+[com.biutthapa/vary "0.0.1-SNAPSHOT"]
+#+END_SRC
 ** Usage
 Define a ~CoffeeSize~ variant for a coffee shop and use it in an order:
 #+BEGIN_SRC clojure
