@@ -1,0 +1,89 @@
+#+TITLE: Vary
+#+SUBTITLE: Elegant variant types for Clojure
+
+*Vary* is a Clojure library for defining enum-like data structures with a concise hashmap syntax, Malli validation, and optional pattern matching.
+
+** Features
+- ~vary~ macro for succinct variant definitions
+- Simple keywords for cases
+- Auto-generated accessors
+- ~cases~ function for metadata inspection.
+- Optional ~match~ macro for pattern matching.
+- REPL-friendly for interactive workflows.
+
+** Installation
+Add to your ~deps.edn~:
+#+BEGIN_SRC clojure
+{:deps {io.github.biutthapa/vary {:git/url "https://github.com/biutthapa/vary"
+                                  :sha ""}}}
+#+END_SRC
+
+** Usage
+Define a ~CoffeeSize~ variant for a coffee shop and use it in an order:
+#+BEGIN_SRC clojure
+(ns coffee-shop
+  (:require [vary.core :refer [vary cases]]))
+
+(vary CoffeeSize
+  {:small  {:label "Small"  :price 3.50 :volume 8}
+   :medium {:label "Medium" :price 4.00 :volume 12}
+   :large  {:label "Large"  :price 4.50 :volume 16}})
+#+END_SRC
+
+All cases
+#+BEGIN_SRC clojure
+(cases CoffeeSize)
+;; => {:small {:label "Small" :price 3.50 :volume 8}
+;;     :medium {:label "Medium" :price 4.00 :volume 12}
+;;     :large {:label "Large" :price 4.50 :volume 16}}
+#+END_SRC
+
+Iterating through cases
+#+BEGIN_SRC clojure
+(println "Available sizes:")
+(doseq [[size props] (cases CoffeeSize)]
+  (println (:label props) ": $" (format "%.2f" (:price props)) " for " (:volume props) " oz"))
+;; => Available sizes:
+;;    Small: $3.50 for 8 oz
+;;    Medium: $4.00 for 12 oz
+;;    Large: $4.50 for 16 oz
+#+END_SRC
+
+Pattern Matching
+#+BEGIN_SRC clojure
+(defn custom-price [size]
+  (match size CoffeeSize
+    :small 3.50
+    :medium 4.00
+    :large 4.50))
+
+(println (custom-price :medium)) ;; => 4.00
+#+END_SRC
+
+Pattern Matching with Associated Values:
+#+BEGIN_SRC clojure
+(defn handle-order [order]
+  (match order OrderStatus
+    :pending "Order is pending"
+    [:completed amount] (str "Completed with amount: " amount)
+    [:failed reason] (str "Failed: " reason)))
+
+(println (handle-order :pending)) ;; => "Order is pending"
+(println (handle-order {:type :completed :amount 5.50})) ;; => "Completed with amount: 5.50"
+(println (handle-order {:type :failed :reason "Out of stock"})) ;; => "Failed: Out of stock"
+#+END_SRC
+
+Auto-generated Accesors
+#+BEGIN_SRC clojure
+(defn order-summary [order]
+  (let [size (:size order)]
+    (str "Order: " (:coffee-type order) " (" ((cases CoffeeSize) size :label)
+         ", " (CoffeeSize-volume size) " oz) - $" (format "%.2f" (CoffeeSize-price size)))))
+
+;; Examples
+(println (order-summary {:coffee-type "Latte" :size :medium}))
+;; => Order: Latte (Medium, 12 oz) - $4.00
+#+END_SRC
+
+** License
+MIT License. See ~LICENSE~ file.

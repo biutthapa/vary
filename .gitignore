@@ -1,3 +1,27 @@
+# Clojure
+/target
+/classes
+/checkouts
+*.jar
+*.class
+/.cpcache
+/.clj-kondo/.cache
+/.lsp/.cache
+/.calva
+
+# Editor
+*.swp
+*~
+.project
+.settings
+.classpath
+.idea
+*.iml
+
+# OS
+.DS_Store
+
+# General
 pom.xml
 pom.xml.asc
 *.jar

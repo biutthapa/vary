@@ -1,0 +1,12 @@
+{:hooks
+ {:analyze-call
+  {vary.core/vary
+   {:fn
+    (fn [{:keys [node]}]
+      (let [[_ vary-name accessors-node _] (:children node)]
+        (when (vector? (:value accessors-node))
+          (let [accessors (:value accessors-node)]
+            {:symbols (into {}
+                            (map (fn [acc]
+                                   [(symbol (str vary-name "-" (name acc))) :defn]))
+                            accessors)}))))}}}}
