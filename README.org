@@ -15,7 +15,7 @@
 Add to your ~deps.edn~:
 #+BEGIN_SRC clojure
 {:deps {io.github.biutthapa/vary {:git/url "https://github.com/biutthapa/vary"
-                                  :sha ""}}}
+                                  :sha "056358effa38eb5b67ed178532b0ff2475780cb4"}}}
 #+END_SRC
 
 ** Usage
