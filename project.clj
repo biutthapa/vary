@@ -1,4 +1,4 @@
-(defproject com.biutthapa/vary "0.0.1-SNAPSHOT"
+(defproject com.biutthapa/vary "0.0.1"
   :description "Elegant variant types for Clojure"
   :url "https://github.com/biutthapa/vary"
   :license {:name "MIT"
