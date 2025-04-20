@@ -1,7 +1,7 @@
-[![Clojars Project](https://img.shields.io/clojars/v/com.biutthapa/vary.svg)](https://clojars.org/com.biutthapa/vary)
-
 #+TITLE: Vary
 #+SUBTITLE: Elegant variant types for Clojure
+
+[[https://clojars.org/com.biutthapa/vary][file:https://img.shields.io/clojars/v/com.biutthapa/vary.svg]]
 
 *Vary* is a Clojure library for defining sum-type data structures with a concise hashmap syntax, Malli validation, and pattern matching.
 
