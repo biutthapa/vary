@@ -1,3 +1,5 @@
+[![Clojars Project](https://img.shields.io/clojars/v/com.biutthapa/vary.svg)](https://clojars.org/com.biutthapa/vary)
+
 #+TITLE: Vary
 #+SUBTITLE: Elegant variant types for Clojure
 
