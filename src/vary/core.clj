@@ -1,6 +1,5 @@
 (ns vary.core
-  (:require [malli.core :as m]
-            [malli.error :as me]))
+  (:require [malli.core :as m]))
 
 (defonce variants (atom {}))
 
@@ -22,14 +21,11 @@
     (into [:or] schemas)))
 
 (defn generate-accessors
-  "Generates accessor functions for all unique properties in the case map."
+  "Generates accessor functions for all unique properties in the case map, only for fields maps."
   [vary-name case-map]
   (let [all-keys (->> (vals case-map)
-                      (mapcat (fn [v]
-                                (cond
-                                  (map? v)    (keys v)
-                                  (vector? v) (->> (partition 2 v) (map first))
-                                  :else nil)))
+                      (filter map?)
+                      (mapcat keys)
                       set)]
     (for [k all-keys]
       (let [fname (symbol (str vary-name "-" (name k)))
@@ -38,7 +34,7 @@
            (get-in (cases ~vary-name) [case# ~kw]))))))
 
 (defmacro vary
-  "Defines a variant with a Malli schema, case metadata, and accessor functions.
+  "Defines a variant with a Malli schema, case fields, and accessor functions.
    Usage:
    (vary CoffeeSize
      {:small  {:label \"Small\" :price 3.50 :volume 8}
@@ -47,15 +43,23 @@
    (vary OrderStatus
      {:pending []
       :completed [:amount :double]
-      :failed [:reason :string]})"
+      :failed [:reason :string]})
+   (vary Color #{:red :blue :green})"
   [vary-name case-map]
-  (let [schema    (generate-schema case-map)
+  (let [case-map (if (set? case-map)
+                   (into {} (for [k case-map] [k {}]))
+                   case-map)
+        schema (generate-schema case-map)
         accessors (generate-accessors vary-name case-map)
-        metadata  (zipmap (keys case-map) (vals case-map))]
+        fields (zipmap (keys case-map) (vals case-map))
+        accessor-names (map (fn [acc-form]
+                              (second acc-form))
+                            accessors)]
     `(do
+       (declare ~vary-name ~@accessor-names)
        (swap! variants assoc '~vary-name
               {:schema (m/schema ~schema)
-               :cases '~metadata})
+               :cases '~fields})
        (def ~vary-name (m/schema ~schema))
        ~@accessors)))
 
@@ -78,24 +82,22 @@
        [:failed reason]       (str \"Failed: \" reason))"
   [value vary-name & clauses]
   (let [cases-var (get-in @variants [vary-name :cases])
-        get-meta  (fn [kw] (get cases-var kw))
-        pairs     (partition 2 clauses)
-        val-sym   (gensym "val")]
+        get-meta (fn [kw] (get cases-var kw))
+        pairs (partition 2 clauses)
+        val-sym (gensym "val")]
     `(let [~val-sym ~value]
        (if (m/validate ~vary-name ~val-sym)
          (cond
            ~@(mapcat
               (fn [[pattern body]]
                 (if (vector? pattern)
-                  (let [case-kw   (first pattern)
+                  (let [case-kw (first pattern)
                         arg-names (rest pattern)
-                        meta-v    (get-meta case-kw)
-                        meta-map  (when (vector? meta-v)
-                                    (apply array-map meta-v))
-                        bindings  (mapcat
-                                   (fn [arg]
-                                     `[~arg (get ~val-sym ~(keyword arg))])
-                                   arg-names)]
+                        meta-v (get-meta case-kw)
+                        bindings (mapcat
+                                  (fn [arg]
+                                    `[~arg (get ~val-sym ~(keyword arg))])
+                                  arg-names)]
                     [`(= (get ~val-sym :type) ~case-kw)
                      `(let [~@bindings]
                         ~body)])
@@ -108,36 +110,41 @@
                          {:value ~val-sym
                           :error (m/explain ~vary-name ~val-sym)}))))))
 
-
-
 (comment
-
-  (vary Fruit {:apple  {:color "red"}
+  (vary Fruit {:apple {:color "red"}
                :banana {:color "yellow"}})
 
   (vary CoffeeSize
-        {:small  {:label "Small" :price 3.50 :volume 8}
+        {:small {:label "Small" :price 3.50 :volume 8}
          :medium {:label "Medium" :price 4.00 :volume 12}
-         :large  {:label "Large" :price 4.50 :volume 16}})
+         :large {:label "Large" :price 4.50 :volume 16}})
 
   (vary OrderStatus
-        {:pending   []
+        {:pending []
          :completed [:amount :double]
-         :failed    [:reason :string]})
+         :failed [:reason :string]})
 
+  (vary Color #{:red :blue :green})
   (cases Fruit)
   (cases CoffeeSize)
   (cases OrderStatus)
-
-
+  (cases Color)
   (CoffeeSize-label :small)
   (CoffeeSize-price :small)
   (CoffeeSize-volume :small)
-
   (Fruit-color :apple)
   (Fruit-color :banana)
-
-
-
+  (match :small CoffeeSize
+    :small "Small coffee"
+    :medium "Medium coffee"
+    :large "Large coffee")
+  (match {:type :completed :amount 10.0} OrderStatus
+    :pending "Order is pending"
+    [:completed amount] (str "Completed with amount: " amount)
+    [:failed reason] (str "Failed: " reason))
+  (match :blue Color
+    :red "Red"
+    :blue "Blue"
+    :green "Green")
   ;;
   )

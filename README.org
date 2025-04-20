@@ -7,7 +7,7 @@
 - ~vary~ macro for succinct variant definitions
 - Simple keywords for cases
 - Auto-generated accessors
-- ~cases~ function for metadata inspection.
+- ~cases~ function for fields inspection.
 - Optional ~match~ macro for pattern matching.
 - REPL-friendly for interactive workflows.
 
@@ -22,71 +22,123 @@ For ~Leiningen/Boot~:
 [com.biutthapa/vary "0.0.1-SNAPSHOT"]
 #+END_SRC
 ** Usage
-Define a ~CoffeeSize~ variant for a coffee shop and use it in an order:
+Define variants:
 #+BEGIN_SRC clojure
 (ns coffee-shop
-  (:require [vary.core :refer [vary cases]]))
+  (:require [vary.core :refer [vary cases match]]))
 
+;; Simple variant with keywords
+(vary Color #{:red :blue :green})
+
+;; Variant with fields
 (vary CoffeeSize
   {:small  {:label "Small"  :price 3.50 :volume 8}
    :medium {:label "Medium" :price 4.00 :volume 12}
    :large  {:label "Large"  :price 4.50 :volume 16}})
+
+;; Variant with associated values
+(vary OrderStatus
+  {:pending []
+   :completed [:amount :double]
+   :failed [:reason :string]})
 #+END_SRC
 
-All cases
+Inspect cases:
 #+BEGIN_SRC clojure
+(cases Color)
+;; => {:red {}, :blue {}, :green {}}
+
 (cases CoffeeSize)
-;; => {:small {:label "Small" :price 3.50 :volume 8}
-;;     :medium {:label "Medium" :price 4.00 :volume 12}
-;;     :large {:label "Large" :price 4.50 :volume 16}}
+;; => {:small {:label "Small" :price 3.50 :volume 8}, ...}
 #+END_SRC
 
-Iterating through cases
+Iterate through fields (for variants with fields):
 #+BEGIN_SRC clojure
-(println "Available sizes:")
 (doseq [[size props] (cases CoffeeSize)]
   (println (:label props) ": $" (format "%.2f" (:price props)) " for " (:volume props) " oz"))
-;; => Available sizes:
-;;    Small: $3.50 for 8 oz
+;; => Small: $3.50 for 8 oz
 ;;    Medium: $4.00 for 12 oz
 ;;    Large: $4.50 for 16 oz
 #+END_SRC
 
-Pattern Matching
+Use ~match~ for pattern matching:
 #+BEGIN_SRC clojure
-(defn custom-price [size]
-  (match size CoffeeSize
-    :small 3.50
-    :medium 4.00
-    :large 4.50))
+;; For simple cases
+(defn color-name [color]
+  (match color Color
+    :red "Red"
+    :blue "Blue"
+    :green "Green"))
 
-(println (custom-price :medium)) ;; => 4.00
-#+END_SRC
+(println (color-name :blue)) ;; => "Blue"
 
-Pattern Matching with Associated Values:
-#+BEGIN_SRC clojure
+;; For associated values
 (defn handle-order [order]
   (match order OrderStatus
     :pending "Order is pending"
     [:completed amount] (str "Completed with amount: " amount)
     [:failed reason] (str "Failed: " reason)))
 
-(println (handle-order :pending)) ;; => "Order is pending"
 (println (handle-order {:type :completed :amount 5.50})) ;; => "Completed with amount: 5.50"
-(println (handle-order {:type :failed :reason "Out of stock"})) ;; => "Failed: Out of stock"
 #+END_SRC
 
-Auto-generated Accesors
+Access fields with auto-generated accessors (only for variants with fields):
 #+BEGIN_SRC clojure
 (defn order-summary [order]
   (let [size (:size order)]
-    (str "Order: " (:coffee-type order) " (" ((cases CoffeeSize) size :label)
+    (str "Order: " (:coffee-type order) " (" (CoffeeSize-label size)
          ", " (CoffeeSize-volume size) " oz) - $" (format "%.2f" (CoffeeSize-price size)))))
 
-;; Examples
 (println (order-summary {:coffee-type "Latte" :size :medium}))
 ;; => Order: Latte (Medium, 12 oz) - $4.00
 #+END_SRC
 
+Note: No accessors are generated for simple variants like ~Color~.
+** Linting
+The configuration is included in the library under ~.clj-kondo/config.edn~.
+
+### Automatic Import (Recommended)
+The easiest way to use the configuration is to import it automatically from the library’s classpath:
+#+BEGIN_SRC bash
+clj-kondo --copy-configs --dependencies --lint "$(clojure -A:deps -Spath)"
+#+END_SRC
+This command copies the configuration to your project’s ~.clj-kondo~ directory, ensuring proper linting of ~vary~ macro calls and accessors. Run it after adding ~vary~ as a dependency or updating the library to refresh the configuration.
+
+### Manual Copy (Alternative)
+If automatic import is not feasible, manually add the following to your ~.clj-kondo/config.edn~:
+#+BEGIN_SRC clojure
+{:lint-as {vary.core/vary clojure.core/def}
+ :hooks
+ {:analyze-call
+  {vary.core/vary
+   {:analyze
+    (fn [{:keys [:node]}]
+      (let [children (:children node)
+            vary-name (when (>= (count children) 2) (nth children 1))
+            case-map (when (>= (count children) 3) (nth children 2))
+            is-symbol-node (fn [n] (and (map? n) (= :token (:tag n))))
+            is-map-node (fn [n] (and (map? n) (= :map (:tag n))))
+            is-keyword-node (fn [n] (and (map? n) (= :keyword (:tag n))))
+            fields (when (and vary-name case-map
+                              (is-symbol-node vary-name)
+                              (is-map-node case-map))
+                     (->> (:children case-map)
+                          (partition 2)
+                          (map second)
+                          (filter is-map-node)
+                          (mapcat :children)
+                          (partition 2)
+                          (map first)
+                          (filter is-keyword-node)
+                          (map :value)
+                          (map name)
+                          distinct))]
+        {:defined-by :clj-kondo.hooks/defined
+         :defined-fns (if (and vary-name fields (is-symbol-node vary-name))
+                        (mapv (fn [field]
+                                (symbol (str (name (:value vary-name)) "-" field)))
+                              fields)
+                        [])}))}}}}
+#+END_SRC
 ** License
 MIT License. See ~LICENSE~ file.

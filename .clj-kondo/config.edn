@@ -1,12 +1,32 @@
-{:hooks
+{:lint-as {vary.core/vary clojure.core/def}
+ :hooks
  {:analyze-call
   {vary.core/vary
-   {:fn
-    (fn [{:keys [node]}]
-      (let [[_ vary-name accessors-node _] (:children node)]
-        (when (vector? (:value accessors-node))
-          (let [accessors (:value accessors-node)]
-            {:symbols (into {}
-                            (map (fn [acc]
-                                   [(symbol (str vary-name "-" (name acc))) :defn]))
-                            accessors)}))))}}}}
+   {:analyze
+    (fn [{:keys [:node]}]
+      (let [children (:children node)
+            vary-name (when (>= (count children) 2) (nth children 1))
+            case-map (when (>= (count children) 3) (nth children 2))
+            is-symbol-node (fn [n] (and (map? n) (= :token (:tag n))))
+            is-map-node (fn [n] (and (map? n) (= :map (:tag n))))
+            is-keyword-node (fn [n] (and (map? n) (= :keyword (:tag n))))
+            fields (when (and vary-name case-map
+                              (is-symbol-node vary-name)
+                              (is-map-node case-map))
+                     (->> (:children case-map)
+                          (partition 2)
+                          (map second)
+                          (filter is-map-node)
+                          (mapcat :children)
+                          (partition 2)
+                          (map first)
+                          (filter is-keyword-node)
+                          (map :value)
+                          (map name)
+                          distinct))]
+        {:defined-by :clj-kondo.hooks/defined
+         :defined-fns (if (and vary-name fields (is-symbol-node vary-name))
+                        (mapv (fn [field]
+                                (symbol (str (name (:value vary-name)) "-" field)))
+                              fields)
+                        [])}))}}}}
