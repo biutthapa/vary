@@ -4,7 +4,7 @@
             [org.corfield.build :as bb]))
 
 (def lib 'com.biutthapa/vary)
-(def version "0.0.1-TEST")
+(def version "0.0.1")
 #_ ; alternatively, use MAJOR.MINOR.COMMITS:
 (def version (format "1.0.%s" (b/git-count-revs nil)))
 
