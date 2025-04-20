@@ -14,12 +14,12 @@
 ** Installation
 For ~Clojure CLI/deps.edn~:
 #+BEGIN_SRC clojure
-com.biutthapa/vary {:mvn/version "0.0.1-SNAPSHOT"}
+com.biutthapa/vary {:mvn/version "0.0.1"}
 #+END_SRC
 
 For ~Leiningen/Boot~:
 #+BEGIN_SRC clojure
-[com.biutthapa/vary "0.0.1-SNAPSHOT"]
+[com.biutthapa/vary "0.0.1"]
 #+END_SRC
 
 ** Usage
@@ -97,17 +97,7 @@ Access associated values with auto-generated accessors (only for variants with a
 Note: No accessors are generated for simple variants like ~Color~.
 
 ** Linting
-The configuration is included in the library under ~.clj-kondo/config.edn~.
-
-*** Automatic Import (Recommended)
-The easiest way to use the configuration is to import it automatically from the library’s classpath:
-#+BEGIN_SRC bash
-clj-kondo --copy-configs --dependencies --lint "$(clojure -A:deps -Spath)"
-#+END_SRC
-This command copies the configuration to your project’s ~.clj-kondo~ directory, ensuring proper linting of ~vary~ macro calls and accessors. Run it after adding ~vary~ as a dependency or updating the library to refresh the configuration.
-
-*** Manual Copy (Alternative)
-If automatic import is not feasible, manually add the following to your ~.clj-kondo/config.edn~:
+Add the following to your ~.clj-kondo/config.edn~:
 #+BEGIN_SRC clojure
 {:lint-as {vary.core/vary clojure.core/def}
  :hooks
