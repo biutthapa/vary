@@ -1,14 +1,14 @@
 #+TITLE: Vary
 #+SUBTITLE: Elegant variant types for Clojure
 
-*Vary* is a Clojure library for defining enum-like data structures with a concise hashmap syntax, Malli validation, and optional pattern matching.
+*Vary* is a Clojure library for defining sum-type data structures with a concise hashmap syntax, Malli validation, and pattern matching.
 
 ** Features
 - ~vary~ macro for succinct variant definitions
 - Simple keywords for cases
-- Auto-generated accessors
 - ~cases~ function for associated values inspection.
-- Optional ~match~ macro for pattern matching.
+- ~match~ macro for pattern matching.
+- Auto-generated accessors
 - REPL-friendly for interactive workflows.
 
 ** Installation
