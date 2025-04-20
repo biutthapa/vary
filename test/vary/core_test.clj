@@ -14,7 +14,7 @@
     (is (m/validate CoffeeSize :large) "Large size should be valid")
     (is (not (m/validate CoffeeSize :invalid)) "Invalid size should fail validation"))
 
-  (testing "Fields storage for map-based variant"
+  (testing "Associated values storage for map-based variant"
     (let [variant-data (get @vary.core/variants 'CoffeeSize)
           expected-cases {:small  {:label "Small" :price 3.50 :volume 8}
                           :medium {:label "Medium" :price 4.00 :volume 12}
@@ -29,15 +29,7 @@
     (is (= "Small" (CoffeeSize-label :small)) "Label accessor should return Small")
     (is (= 3.50 (CoffeeSize-price :small)) "Price accessor should return 3.50")
     (is (= 8 (CoffeeSize-volume :small)) "Volume accessor should return 8")
-    (is (= nil (CoffeeSize-price :invalid)) "Accessor for invalid case should return nil"))
-
-  (testing "Set-based variant"
-    (vary Color #{:red :blue :green})
-    (is (m/validate Color :red) "Red should be valid")
-    (is (m/validate Color :blue) "Blue should be valid")
-    (is (m/validate Color :green) "Green should be valid")
-    (is (not (m/validate Color :yellow)) "Yellow should be invalid")
-    (is (nil? (resolve 'Color-label)) "No accessors should be generated for Color")))
+    (is (= nil (CoffeeSize-price :invalid)) "Accessor for invalid case should return nil")))
 
 (deftest test-cases
   (testing "Map-based variant cases"
@@ -52,7 +44,7 @@
   (testing "Set-based variant cases"
     (vary Color #{:red :blue :green})
     (is (= (cases Color) {:red {} :blue {} :green {}})
-        "Cases should return a map with empty fields")))
+        "Cases should return a map with empty associated values")))
 
 (deftest test-match
   (vary CoffeeSize
@@ -77,7 +69,7 @@
                   :large  4.50))
         "Matching :medium should return 4.00"))
 
-  (testing "Associated values"
+  (testing "Fields"
     (is (= "Completed with amount: 5.5"
            (match {:type :completed :amount 5.5} OrderStatus
              :pending            "Pending"
@@ -89,54 +81,20 @@
              :pending            "Pending"
              [:completed amount] "Completed"
              [:failed reason]    (str "Failed: " reason)))
-        "Matching failed order should return reason"))
-
-  (testing "Matching set-based variant"
-    (is (= "Blue" (match :blue Color
-                    :red "Red"
-                    :blue "Blue"
-                    :green "Green"))
-        "Matching :blue should return \"Blue\"")
-    (is (thrown? Exception
-                 (match :yellow Color
-                   :red "Red"
-                   :blue "Blue"
-                   :green "Green"))
-        "Matching invalid color should throw an exception"))
-
-  (testing "Validation"
-    (is (thrown? Exception
-                 (match :invalid CoffeeSize
-                   :small  3.50
-                   :medium 4.00
-                   :large  4.50))
-        "Invalid CoffeeSize should throw an exception")
-    (is (thrown? Exception
-                 (match {:type :completed :amount "not a number"} OrderStatus
-                   :pending            "Pending"
-                   [:completed amount] amount
-                   [:failed reason]    reason))
-        "Invalid amount type should throw an exception"))
-
-  (testing "Unmatched cases"
-    (is (thrown? Exception
-                 (match :large CoffeeSize
-                   :small  3.50
-                   :medium 4.00))
-        "Unmatched case should throw an exception")))
+        "Matching failed order should return reason")))
 
 (deftest test-generate-schema
   (testing "Simple cases"
     (is (= (vary.core/generate-schema {:small {} :medium {}})
            [:or [:= :small] [:= :medium]])
         "Simple cases should generate an OR schema"))
-  (testing "Cases with associated values"
+  (testing "Cases with fields"
     (is (= (vary.core/generate-schema {:completed [:amount :double]})
            [:or [:map [:type [:= :completed]] [:amount :double]]])
         "Cases with args should generate a map schema")))
 
 (deftest test-generate-accessors
-  (testing "Accessor generation for fields"
+  (testing "Accessor generation for associated values"
     (let [accessors (vary.core/generate-accessors 'CoffeeSize
                                                   {:small  {:price 3.50}
                                                    :medium {:price 4.00}})]

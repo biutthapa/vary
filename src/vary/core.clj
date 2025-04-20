@@ -21,7 +21,7 @@
     (into [:or] schemas)))
 
 (defn generate-accessors
-  "Generates accessor functions for all unique properties in the case map, only for fields maps."
+  "Generates accessor functions for all unique properties in the case map, only for associated values maps."
   [vary-name case-map]
   (let [all-keys (->> (vals case-map)
                       (filter map?)
@@ -34,7 +34,7 @@
            (get-in (cases ~vary-name) [case# ~kw]))))))
 
 (defmacro vary
-  "Defines a variant with a Malli schema, case fields, and accessor functions.
+  "Defines a variant with a Malli schema, case associated values, and accessor functions.
    Usage:
    (vary CoffeeSize
      {:small  {:label \"Small\" :price 3.50 :volume 8}

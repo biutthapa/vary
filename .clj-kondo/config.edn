@@ -10,23 +10,23 @@
             is-symbol-node (fn [n] (and (map? n) (= :token (:tag n))))
             is-map-node (fn [n] (and (map? n) (= :map (:tag n))))
             is-keyword-node (fn [n] (and (map? n) (= :keyword (:tag n))))
-            fields (when (and vary-name case-map
-                              (is-symbol-node vary-name)
-                              (is-map-node case-map))
-                     (->> (:children case-map)
-                          (partition 2)
-                          (map second)
-                          (filter is-map-node)
-                          (mapcat :children)
-                          (partition 2)
-                          (map first)
-                          (filter is-keyword-node)
-                          (map :value)
-                          (map name)
-                          distinct))]
+            associated-values (when (and vary-name case-map
+                                         (is-symbol-node vary-name)
+                                         (is-map-node case-map))
+                                (->> (:children case-map)
+                                     (partition 2)
+                                     (map second)
+                                     (filter is-map-node)
+                                     (mapcat :children)
+                                     (partition 2)
+                                     (map first)
+                                     (filter is-keyword-node)
+                                     (map :value)
+                                     (map name)
+                                     distinct))]
         {:defined-by :clj-kondo.hooks/defined
-         :defined-fns (if (and vary-name fields (is-symbol-node vary-name))
+         :defined-fns (if (and vary-name associated-values (is-symbol-node vary-name))
                         (mapv (fn [field]
                                 (symbol (str (name (:value vary-name)) "-" field)))
-                              fields)
+                              associated-values)
                         [])}))}}}}

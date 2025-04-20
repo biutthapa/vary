@@ -7,7 +7,7 @@
 - ~vary~ macro for succinct variant definitions
 - Simple keywords for cases
 - Auto-generated accessors
-- ~cases~ function for fields inspection.
+- ~cases~ function for associated values inspection.
 - Optional ~match~ macro for pattern matching.
 - REPL-friendly for interactive workflows.
 
@@ -21,6 +21,7 @@ For ~Leiningen/Boot~:
 #+BEGIN_SRC clojure
 [com.biutthapa/vary "0.0.1-SNAPSHOT"]
 #+END_SRC
+
 ** Usage
 Define variants:
 #+BEGIN_SRC clojure
@@ -30,13 +31,13 @@ Define variants:
 ;; Simple variant with keywords
 (vary Color #{:red :blue :green})
 
-;; Variant with fields
+;; Variant with associated values
 (vary CoffeeSize
   {:small  {:label "Small"  :price 3.50 :volume 8}
    :medium {:label "Medium" :price 4.00 :volume 12}
    :large  {:label "Large"  :price 4.50 :volume 16}})
 
-;; Variant with associated values
+;; Variant with fields
 (vary OrderStatus
   {:pending []
    :completed [:amount :double]
@@ -52,7 +53,7 @@ Inspect cases:
 ;; => {:small {:label "Small" :price 3.50 :volume 8}, ...}
 #+END_SRC
 
-Iterate through fields (for variants with fields):
+Iterate through associated values (for variants with associated values):
 #+BEGIN_SRC clojure
 (doseq [[size props] (cases CoffeeSize)]
   (println (:label props) ": $" (format "%.2f" (:price props)) " for " (:volume props) " oz"))
@@ -72,7 +73,7 @@ Use ~match~ for pattern matching:
 
 (println (color-name :blue)) ;; => "Blue"
 
-;; For associated values
+;; For fields
 (defn handle-order [order]
   (match order OrderStatus
     :pending "Order is pending"
@@ -82,7 +83,7 @@ Use ~match~ for pattern matching:
 (println (handle-order {:type :completed :amount 5.50})) ;; => "Completed with amount: 5.50"
 #+END_SRC
 
-Access fields with auto-generated accessors (only for variants with fields):
+Access associated values with auto-generated accessors (only for variants with associated values):
 #+BEGIN_SRC clojure
 (defn order-summary [order]
   (let [size (:size order)]
@@ -94,6 +95,7 @@ Access fields with auto-generated accessors (only for variants with fields):
 #+END_SRC
 
 Note: No accessors are generated for simple variants like ~Color~.
+
 ** Linting
 The configuration is included in the library under ~.clj-kondo/config.edn~.
 
@@ -119,26 +121,27 @@ If automatic import is not feasible, manually add the following to your ~.clj-ko
             is-symbol-node (fn [n] (and (map? n) (= :token (:tag n))))
             is-map-node (fn [n] (and (map? n) (= :map (:tag n))))
             is-keyword-node (fn [n] (and (map? n) (= :keyword (:tag n))))
-            fields (when (and vary-name case-map
-                              (is-symbol-node vary-name)
-                              (is-map-node case-map))
-                     (->> (:children case-map)
-                          (partition 2)
-                          (map second)
-                          (filter is-map-node)
-                          (mapcat :children)
-                          (partition 2)
-                          (map first)
-                          (filter is-keyword-node)
-                          (map :value)
-                          (map name)
-                          distinct))]
+            associated-values (when (and vary-name case-map
+                                         (is-symbol-node vary-name)
+                                         (is-map-node case-map))
+                                (->> (:children case-map)
+                                     (partition 2)
+                                     (map second)
+                                     (filter is-map-node)
+                                     (mapcat :children)
+                                     (partition 2)
+                                     (map first)
+                                     (filter is-keyword-node)
+                                     (map :value)
+                                     (map name)
+                                     distinct))]
         {:defined-by :clj-kondo.hooks/defined
-         :defined-fns (if (and vary-name fields (is-symbol-node vary-name))
+         :defined-fns (if (and vary-name associated-values (is-symbol-node vary-name))
                         (mapv (fn [field]
                                 (symbol (str (name (:value vary-name)) "-" field)))
-                              fields)
+                              associated-values)
                         [])}))}}}}
 #+END_SRC
+
 ** License
 MIT License. See ~LICENSE~ file.
